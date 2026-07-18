@@ -1,9 +1,6 @@
 "use client";
 
-import {
-  FormEvent,
-  useState,
-} from "react";
+import { FormEvent, useState } from "react";
 
 type SubmitStatus =
   | "idle"
@@ -50,7 +47,6 @@ export default function TicketPage() {
       ),
       message: String(formData.get("message") ?? ""),
       privacy: formData.get("privacy") === "on",
-      website: String(formData.get("website") ?? ""),
     };
 
     try {
@@ -91,7 +87,9 @@ export default function TicketPage() {
   return (
     <main className="ticket-page">
       <section className="subpage-hero subpage-hero-dark">
-        <p className="page-eyebrow">Ticket inquiry</p>
+        <p className="page-eyebrow">
+          Ticket inquiry
+        </p>
 
         <h1>
           무대에서
@@ -107,9 +105,13 @@ export default function TicketPage() {
 
       <section className="ticket-form-section">
         <div className="ticket-information">
-          <p className="page-eyebrow">Information</p>
+          <p className="page-eyebrow">
+            Information
+          </p>
 
-          <h2>문의 전 확인해 주세요.</h2>
+          <h2>
+            문의 전 확인해 주세요.
+          </h2>
 
           <ul>
             <li>
@@ -146,21 +148,6 @@ export default function TicketPage() {
           className="ticket-form"
           onSubmit={handleSubmit}
         >
-          {/* 자동 입력 봇 방지용 숨김 필드 */}
-          <label
-            className="ticket-honeypot"
-            aria-hidden="true"
-          >
-            <span>Website</span>
-
-            <input
-              type="text"
-              name="website"
-              tabIndex={-1}
-              autoComplete="off"
-            />
-          </label>
-
           <div className="ticket-form-row">
             <label>
               <span>이름 *</span>
@@ -170,6 +157,7 @@ export default function TicketPage() {
                 name="name"
                 placeholder="이름을 입력해 주세요"
                 maxLength={50}
+                autoComplete="name"
                 required
               />
             </label>
@@ -182,6 +170,7 @@ export default function TicketPage() {
                 name="email"
                 placeholder="hello@example.com"
                 maxLength={120}
+                autoComplete="email"
                 required
               />
             </label>
@@ -196,6 +185,7 @@ export default function TicketPage() {
                 name="phone"
                 placeholder="010-0000-0000"
                 maxLength={30}
+                autoComplete="tel"
                 required
               />
             </label>
@@ -206,9 +196,9 @@ export default function TicketPage() {
               <input
                 type="number"
                 name="ticketCount"
-                min="1"
-                max="30"
-                defaultValue="1"
+                min={1}
+                max={30}
+                defaultValue={1}
                 required
               />
             </label>
@@ -259,7 +249,8 @@ export default function TicketPage() {
             />
 
             <span>
-              문의 처리를 위한 개인정보 수집 및 이용에 동의합니다.
+              문의 처리를 위한 개인정보 수집 및 이용에
+              동의합니다.
             </span>
           </label>
 
@@ -273,13 +264,18 @@ export default function TicketPage() {
               : "문의 보내기"}
 
             <span>
-              {submitStatus === "submitting" ? "···" : "↗"}
+              {submitStatus === "submitting"
+                ? "···"
+                : "↗"}
             </span>
           </button>
 
           {statusMessage && (
             <p
-              className={`ticket-form-status ticket-form-status-${submitStatus}`}
+              className={[
+                "ticket-form-status",
+                `ticket-form-status-${submitStatus}`,
+              ].join(" ")}
               role="status"
               aria-live="polite"
             >

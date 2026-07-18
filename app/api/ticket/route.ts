@@ -1,17 +1,16 @@
 import { NextResponse } from "next/server";
-import { Resend } from "resend";
+import { ServerClient } from "postmark";
 
 export const runtime = "nodejs";
 
 type TicketRequestBody = {
-  name?: string;
-  email?: string;
-  phone?: string;
-  ticketCount?: string | number;
-  performance?: string;
-  message?: string;
-  privacy?: boolean;
-  website?: string;
+  name?: unknown;
+  email?: unknown;
+  phone?: unknown;
+  ticketCount?: unknown;
+  performance?: unknown;
+  message?: unknown;
+  privacy?: unknown;
 };
 
 const performanceNames: Record<string, string> = {
@@ -20,284 +19,9 @@ const performanceNames: Record<string, string> = {
   other: "기타 문의",
 };
 
-function escapeHtml(value: string) {
-  return value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-}
-
-function normalizeText(value: unknown, maxLength: number) {
-  if (typeof value !== "string") {
-    return "";
-  }
-
-  return value.trim().slice(0, maxLength);
-}
-
-function isValidEmail(email: string) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-}
-
-export async function POST(request: Request) {
-  try {
-    const apiKey = process.env.RESEND_API_KEY;
-    const adminEmail = process.env.ADMIN_EMAIL;
-    const fromEmail = process.env.RESEND_FROM_EMAIL;
-
-    if (!apiKey || !adminEmail || !fromEmail) {
-      console.error("Resend 환경변수가 설정되지 않았습니다.");
-
-      return NextResponse.json(
-        {
-          success: false,
-          message: "메일 서버 설정이 완료되지 않았습니다.",
-        },
-        { status: 500 },
-      );
-    }
-
-    const body = (await request.json()) as TicketRequestBody;
-
-    /*
-     * 사용자가 볼 수 없는 입력란입니다.
-     * 자동 입력 봇이 값을 채운 경우 요청을 정상 처리한 것처럼 종료합니다.
-     */
-    if (body.website) {
-      return NextResponse.json({ success: true });
-    }
-
-    const name = normalizeText(body.name, 50);
-    const email = normalizeText(body.email, 120);
-    const phone = normalizeText(body.phone, 30);
-    const performance = normalizeText(body.performance, 50);
-    const message = normalizeText(body.message, 3000);
-
-    const parsedTicketCount = Number(body.ticketCount);
-    const ticketCount = Number.isInteger(parsedTicketCount)
-      ? parsedTicketCount
-      : 0;
-
-    if (!name || !email || !phone || !performance) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "필수 입력 항목을 모두 작성해 주세요.",
-        },
-        { status: 400 },
-      );
-    }
-
-    if (!isValidEmail(email)) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "올바른 이메일 주소를 입력해 주세요.",
-        },
-        { status: 400 },
-      );
-    }
-
-    if (ticketCount < 1 || ticketCount > 30) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "티켓 수량은 1장부터 30장까지 선택할 수 있습니다.",
-        },
-        { status: 400 },
-      );
-    }
-
-    if (body.privacy !== true) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "개인정보 수집 및 이용에 동의해 주세요.",
-        },
-        { status: 400 },
-      );
-    }
-
-    const performanceName =
-      performanceNames[performance] ?? performance;
-
-    const resend = new Resend(apiKey);
-
-    const { data, error } = await resend.emails.send({
-      from: fromEmail,
-      to: [adminEmail],
-
-      /*
-       * 관리자가 이메일에서 바로 답장하면
-       * 문의자가 입력한 이메일로 전송됩니다.
-       */
-      replyTo: email,
-
-      subject: `[Pulsar Core 티켓 문의] ${name} · ${performanceName}`,
-
-      text: [
-        "새로운 티켓 문의가 접수되었습니다.",
-        "",
-        `이름: ${name}`,
-        `이메일: ${email}`,
-        `연락처: ${phone}`,
-        `희망 공연: ${performanceName}`,
-        `티켓 수량: ${ticketCount}장`,
-        "",
-        "문의 내용:",
-        message || "작성된 문의 내용이 없습니다.",
-      ].join("\n"),
-
-      html: `
-        <div
-          style="
-            max-width: 640px;
-            margin: 0 auto;
-            padding: 36px;
-            background: #fbfbff;
-            color: #171130;
-            font-family: Arial, 'Apple SD Gothic Neo', sans-serif;
-          "
-        >
-          <p
-            style="
-              margin: 0 0 12px;
-              color: #2388ff;
-              font-size: 11px;
-              font-weight: 700;
-              letter-spacing: 0.16em;
-              text-transform: uppercase;
-            "
-          >
-            Pulsar Core
-          </p>
-
-          <h1
-            style="
-              margin: 0 0 32px;
-              font-size: 28px;
-              line-height: 1.35;
-            "
-          >
-            새로운 티켓 문의가 접수되었습니다.
-          </h1>
-
-          <table
-            style="
-              width: 100%;
-              border-collapse: collapse;
-              background: #ffffff;
-            "
-          >
-            <tbody>
-              <tr>
-                <th style="${tableHeaderStyle}">이름</th>
-                <td style="${tableCellStyle}">
-                  ${escapeHtml(name)}
-                </td>
-              </tr>
-
-              <tr>
-                <th style="${tableHeaderStyle}">이메일</th>
-                <td style="${tableCellStyle}">
-                  <a href="mailto:${escapeHtml(email)}">
-                    ${escapeHtml(email)}
-                  </a>
-                </td>
-              </tr>
-
-              <tr>
-                <th style="${tableHeaderStyle}">연락처</th>
-                <td style="${tableCellStyle}">
-                  <a href="tel:${escapeHtml(phone)}">
-                    ${escapeHtml(phone)}
-                  </a>
-                </td>
-              </tr>
-
-              <tr>
-                <th style="${tableHeaderStyle}">희망 공연</th>
-                <td style="${tableCellStyle}">
-                  ${escapeHtml(performanceName)}
-                </td>
-              </tr>
-
-              <tr>
-                <th style="${tableHeaderStyle}">티켓 수량</th>
-                <td style="${tableCellStyle}">
-                  ${ticketCount}장
-                </td>
-              </tr>
-            </tbody>
-          </table>
-
-          <div
-            style="
-              margin-top: 24px;
-              padding: 24px;
-              background: #ffffff;
-              border: 1px solid rgba(35, 22, 99, 0.12);
-            "
-          >
-            <p
-              style="
-                margin: 0 0 12px;
-                color: #2388ff;
-                font-size: 11px;
-                font-weight: 700;
-              "
-            >
-              문의 내용
-            </p>
-
-            <p
-              style="
-                margin: 0;
-                white-space: pre-wrap;
-                font-size: 14px;
-                line-height: 1.8;
-              "
-            >${escapeHtml(
-              message || "작성된 문의 내용이 없습니다.",
-            )}</p>
-          </div>
-        </div>
-      `,
-    });
-
-    if (error) {
-      console.error("Resend 전송 오류:", error);
-
-      return NextResponse.json(
-        {
-          success: false,
-          message:
-            "문의 전송에 실패했습니다. 잠시 후 다시 시도해 주세요.",
-        },
-        { status: 500 },
-      );
-    }
-
-    return NextResponse.json({
-      success: true,
-      message: "문의가 정상적으로 접수되었습니다.",
-      emailId: data?.id,
-    });
-  } catch (error) {
-    console.error("티켓 문의 API 오류:", error);
-
-    return NextResponse.json(
-      {
-        success: false,
-        message:
-          "문의 전송 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.",
-      },
-      { status: 500 },
-    );
-  }
-}
+const allowedPerformances = new Set(
+  Object.keys(performanceNames),
+);
 
 const tableHeaderStyle = [
   "width: 120px",
@@ -315,3 +39,458 @@ const tableCellStyle = [
   "font-size: 14px",
   "line-height: 1.6",
 ].join(";");
+
+function escapeHtml(value: string) {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function normalizeText(
+  value: unknown,
+  maxLength: number,
+) {
+  if (typeof value !== "string") {
+    return "";
+  }
+
+  return value.trim().slice(0, maxLength);
+}
+
+function isValidEmail(email: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+function createEmailHtml({
+  name,
+  email,
+  phone,
+  performanceName,
+  ticketCount,
+  message,
+}: {
+  name: string;
+  email: string;
+  phone: string;
+  performanceName: string;
+  ticketCount: number;
+  message: string;
+}) {
+  const safeName = escapeHtml(name);
+  const safeEmail = escapeHtml(email);
+  const safePhone = escapeHtml(phone);
+  const safePerformanceName =
+    escapeHtml(performanceName);
+
+  const safeMessage = escapeHtml(
+    message || "작성된 문의 내용이 없습니다.",
+  );
+
+  return `
+    <div
+      style="
+        max-width: 640px;
+        margin: 0 auto;
+        padding: 36px;
+        background: #fbfbff;
+        color: #171130;
+        font-family: Arial, 'Apple SD Gothic Neo', sans-serif;
+      "
+    >
+      <p
+        style="
+          margin: 0 0 12px;
+          color: #2388ff;
+          font-size: 11px;
+          font-weight: 700;
+          letter-spacing: 0.16em;
+          text-transform: uppercase;
+        "
+      >
+        Pulsar Core
+      </p>
+
+      <h1
+        style="
+          margin: 0 0 32px;
+          font-size: 28px;
+          line-height: 1.35;
+        "
+      >
+        새로운 티켓 문의가 접수되었습니다.
+      </h1>
+
+      <table
+        style="
+          width: 100%;
+          border-collapse: collapse;
+          background: #ffffff;
+        "
+      >
+        <tbody>
+          <tr>
+            <th style="${tableHeaderStyle}">
+              이름
+            </th>
+
+            <td style="${tableCellStyle}">
+              ${safeName}
+            </td>
+          </tr>
+
+          <tr>
+            <th style="${tableHeaderStyle}">
+              이메일
+            </th>
+
+            <td style="${tableCellStyle}">
+              <a href="mailto:${safeEmail}">
+                ${safeEmail}
+              </a>
+            </td>
+          </tr>
+
+          <tr>
+            <th style="${tableHeaderStyle}">
+              연락처
+            </th>
+
+            <td style="${tableCellStyle}">
+              <a href="tel:${safePhone}">
+                ${safePhone}
+              </a>
+            </td>
+          </tr>
+
+          <tr>
+            <th style="${tableHeaderStyle}">
+              희망 공연
+            </th>
+
+            <td style="${tableCellStyle}">
+              ${safePerformanceName}
+            </td>
+          </tr>
+
+          <tr>
+            <th style="${tableHeaderStyle}">
+              티켓 수량
+            </th>
+
+            <td style="${tableCellStyle}">
+              ${ticketCount}장
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div
+        style="
+          margin-top: 24px;
+          padding: 24px;
+          background: #ffffff;
+          border: 1px solid rgba(35, 22, 99, 0.12);
+        "
+      >
+        <p
+          style="
+            margin: 0 0 12px;
+            color: #2388ff;
+            font-size: 11px;
+            font-weight: 700;
+          "
+        >
+          문의 내용
+        </p>
+
+        <p
+          style="
+            margin: 0;
+            white-space: pre-wrap;
+            font-size: 14px;
+            line-height: 1.8;
+          "
+        >${safeMessage}</p>
+      </div>
+    </div>
+  `;
+}
+
+export async function POST(request: Request) {
+  console.log("✅ /api/ticket POST 요청 수신");
+
+  try {
+    const serverToken =
+      process.env.POSTMARK_SERVER_TOKEN;
+
+    const adminEmail =
+      process.env.ADMIN_EMAIL;
+
+    const fromEmail =
+      process.env.POSTMARK_FROM_EMAIL;
+
+    console.log("📋 Postmark 환경변수 확인", {
+      hasServerToken: Boolean(serverToken),
+      adminEmail: adminEmail ?? "없음",
+      fromEmail: fromEmail ?? "없음",
+    });
+
+    if (!serverToken || !adminEmail || !fromEmail) {
+      console.error(
+        "❌ Postmark 환경변수가 설정되지 않았습니다.",
+      );
+
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "메일 서버 설정이 완료되지 않았습니다.",
+        },
+        {
+          status: 500,
+        },
+      );
+    }
+
+    const contentType =
+      request.headers.get("content-type") ?? "";
+
+    if (
+      !contentType
+        .toLowerCase()
+        .includes("application/json")
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "잘못된 요청 형식입니다.",
+        },
+        {
+          status: 415,
+        },
+      );
+    }
+
+    const body =
+      (await request.json()) as TicketRequestBody;
+
+    const name = normalizeText(body.name, 50);
+    const email = normalizeText(body.email, 120);
+    const phone = normalizeText(body.phone, 30);
+
+    const performance = normalizeText(
+      body.performance,
+      50,
+    );
+
+    const message = normalizeText(
+      body.message,
+      3000,
+    );
+
+    const parsedTicketCount = Number(
+      body.ticketCount,
+    );
+
+    const ticketCount = Number.isInteger(
+      parsedTicketCount,
+    )
+      ? parsedTicketCount
+      : 0;
+
+    if (!name || !email || !phone || !performance) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "필수 입력 항목을 모두 작성해 주세요.",
+        },
+        {
+          status: 400,
+        },
+      );
+    }
+
+    if (!isValidEmail(email)) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "올바른 이메일 주소를 입력해 주세요.",
+        },
+        {
+          status: 400,
+        },
+      );
+    }
+
+    if (!allowedPerformances.has(performance)) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "올바른 공연을 선택해 주세요.",
+        },
+        {
+          status: 400,
+        },
+      );
+    }
+
+    if (
+      ticketCount < 1 ||
+      ticketCount > 30
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "티켓 수량은 1장부터 30장까지 선택할 수 있습니다.",
+        },
+        {
+          status: 400,
+        },
+      );
+    }
+
+    if (body.privacy !== true) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "개인정보 수집 및 이용에 동의해 주세요.",
+        },
+        {
+          status: 400,
+        },
+      );
+    }
+
+    const performanceName =
+      performanceNames[performance];
+
+    const postmarkClient =
+      new ServerClient(serverToken);
+
+    console.log("📨 Postmark 전송 시도", {
+      from: fromEmail,
+      to: adminEmail,
+      replyTo: email,
+      performance: performanceName,
+      ticketCount,
+    });
+
+    const result = await postmarkClient.sendEmail({
+      From: fromEmail,
+      To: adminEmail,
+      ReplyTo: email,
+
+      Subject:
+        `[Pulsar Core 티켓 문의] ` +
+        `${name} · ${performanceName}`,
+
+      TextBody: [
+        "새로운 티켓 문의가 접수되었습니다.",
+        "",
+        `이름: ${name}`,
+        `이메일: ${email}`,
+        `연락처: ${phone}`,
+        `희망 공연: ${performanceName}`,
+        `티켓 수량: ${ticketCount}장`,
+        "",
+        "문의 내용:",
+        message ||
+          "작성된 문의 내용이 없습니다.",
+      ].join("\n"),
+
+      HtmlBody: createEmailHtml({
+        name,
+        email,
+        phone,
+        performanceName,
+        ticketCount,
+        message,
+      }),
+
+      MessageStream: "outbound",
+    });
+
+    console.log("📬 Postmark 응답", {
+      messageId: result.MessageID,
+      errorCode: result.ErrorCode,
+      message: result.Message,
+      submittedAt: result.SubmittedAt,
+    });
+
+    if (result.ErrorCode !== 0) {
+      console.error(
+        "❌ Postmark 전송 실패:",
+        result,
+      );
+
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            result.Message ||
+            "문의 전송에 실패했습니다.",
+        },
+        {
+          status: 500,
+        },
+      );
+    }
+
+    console.log(
+      "✅ 문의 메일 전송 완료:",
+      result.MessageID,
+    );
+
+    return NextResponse.json({
+      success: true,
+      message:
+        "문의가 정상적으로 접수되었습니다.",
+    });
+  } catch (error) {
+    console.error(
+      "❌ 티켓 문의 API 예외:",
+      error,
+    );
+
+    let errorMessage =
+      "문의 전송 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.";
+
+    if (error instanceof Error) {
+      console.error(
+        "에러 메시지:",
+        error.message,
+      );
+
+      console.error(
+        "에러 스택:",
+        error.stack,
+      );
+
+      /*
+       * 개발 중에는 실제 Postmark 오류를 화면에 표시해
+       * 설정 문제를 쉽게 확인할 수 있습니다.
+       */
+      if (process.env.NODE_ENV === "development") {
+        errorMessage = error.message;
+      }
+    }
+
+    return NextResponse.json(
+      {
+        success: false,
+        message: errorMessage,
+      },
+      {
+        status: 500,
+      },
+    );
+  }
+}
