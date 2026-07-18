@@ -10,78 +10,43 @@ export default function HomePage() {
   return (
     <main className="home-page">
       <section className="home-hero">
-        <div className="home-hero-background" aria-hidden="true">
-          <span>✦</span>
-          <span>✧</span>
-          <span>·</span>
-        </div>
-
-        <div className="home-hero-copy">
-          <p className="page-eyebrow">
-            Contemporary Dance Company · Seoul
-          </p>
-
-          <h1>
-            압축된 에너지를
-            <br />
-            <span>움직임으로 해방하다.</span>
-          </h1>
-
-          <p className="home-hero-description">
-            별의 잔광과 서로 다른 극성에서 출발한 움직임.
-            Pulsar Core는 신체에 축적된 감각을 무대 위의 파동으로
-            변환합니다.
-          </p>
-
-          <div className="home-hero-actions">
-            <Link href="/performances" className="primary-link">
-              작품 보기
-              <span>↗</span>
-            </Link>
-
-            <Link href="/about" className="secondary-link">
-              무용단 이야기
-              <span>→</span>
-            </Link>
-          </div>
-        </div>
-
-        <figure className="home-hero-poster">
           <img
-            src="https://images.unsplash.com/photo-1509824227185-9c5a01ceba0d?auto=format&fit=crop&w=1400&q=90"
-            alt="Pulsar Core 현대무용 공연"
+            className="home-hero-image"
+            src="https://images.unsplash.com/photo-1509824227185-9c5a01ceba0d?auto=format&fit=crop&w=2200&q=90"
+            alt="Pulsar Core"
           />
-          <figcaption>
-            <span>PULSAR CORE</span>
-            <span>Archive No. 001</span>
-          </figcaption>
-        </figure>
-      </section>
 
-      <section className="home-introduction">
-        <div className="section-title">
-          <p className="section-index">01</p>
+          <div className="home-hero-overlay" />
 
-          <div>
-            <p className="page-eyebrow">About us</p>
-            <h2>
-              보이지 않는 힘을
+          <div className="home-hero-content">
+            <p className="page-eyebrow">
+              Contemporary Dance Company · Seoul
+            </p>
+
+            <h1>
+              압축된 에너지를
               <br />
-              움직임으로 번역합니다.
-            </h2>
+              움직임으로 해방하다.
+            </h1>
+
+            <p className="home-hero-description">
+              별의 잔광과 서로 다른 극성에서 출발한 움직임.
+              <br />
+              Pulsar Core는 신체에 축적된 감각을 무대 위의 파동으로
+              변환합니다.
+            </p>
+
+            <div className="home-hero-actions">
+              <Link href="/performances" className="primary-link">
+                작품 보기
+                <span>↗</span>
+              </Link>
+
+            <Link href="/about" className="secondary-link hero-secondary">
+                무용단 이야기
+                <span>→</span>
+            </Link>
           </div>
-        </div>
-
-        <div className="home-introduction-content">
-          <p>
-            Pulsar Core는 펄서의 응축된 에너지와 서로 다른 극성에서
-            영감을 받은 컨템퍼러리 무용단입니다.
-          </p>
-
-          <Link href="/about" className="text-arrow-link">
-            무용단 자세히 보기
-            <span>↗</span>
-          </Link>
         </div>
       </section>
 

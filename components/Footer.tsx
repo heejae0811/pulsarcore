@@ -98,23 +98,6 @@ export default function Footer() {
         </div>
       </div>
 
-      <div className="footer-orbit" aria-hidden="true">
-        <div className="footer-orbit-line footer-orbit-line-one" />
-        <div className="footer-orbit-line footer-orbit-line-two" />
-
-        <span className="footer-orbit-star footer-orbit-star-one">
-          ✦
-        </span>
-
-        <span className="footer-orbit-star footer-orbit-star-two">
-          ✧
-        </span>
-
-        <span className="footer-orbit-star footer-orbit-star-three">
-          ·
-        </span>
-      </div>
-
       <div className="footer-bottom">
         <p>
           © {new Date().getFullYear()} Pulsar Core. All rights reserved.

@@ -1,27 +1,19 @@
 export default function TicketPage() {
   return (
     <main className="ticket-page">
-      <section className="ticket-page-introduction">
-        <div>
-          <p className="page-eyebrow">Ticket inquiry</p>
+      <section className="subpage-hero subpage-hero-dark">
+        <p className="page-eyebrow">Ticket inquiry</p>
 
-          <h1>
+        <h1>
             무대에서
             <br />
             만나요.
-          </h1>
+        </h1>
 
-          <p>
+        <p>
             아래 양식을 작성해 보내주시면 무용단에서 확인한 후
             이메일 또는 전화로 안내드립니다.
           </p>
-        </div>
-
-        <div className="ticket-page-stars" aria-hidden="true">
-          <span>✦</span>
-          <span>✧</span>
-          <span>✦</span>
-        </div>
       </section>
 
       <section className="ticket-form-section">
